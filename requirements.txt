@@ -1,6 +1,6 @@
 flask==2.0.1
 opencv-python==4.5.3.56
-numpy
+numpy==1.21.2
 Pillow
 mediapipe
 scipy
