@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Makeup Try On</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Virtual Makeup Try On</h1>
+            <p>Experience the magic of instant makeup transformation</p>
+        </header>
+
+        <div class="main-content">
+            <div class="makeup-panel">
+                <nav class="categories">
+                    <button class="active" data-category="all">
+                        <span class="material-icons">auto_awesome</span>
+                        All
+                    </button>
+                    <button data-category="lipstick">
+                        <span class="material-icons">favorite</span>
+                        Lipstick
+                    </button>
+                    <button data-category="eyeshadow">
+                        <span class="material-icons">remove_red_eye</span>
+                        Eye Shadow
+                    </button>
+                    <button data-category="eyeliner">
+                        <span class="material-icons">brush</span>
+                        Eye Liner
+                    </button>
+                    <button data-category="blush">
+                        <span class="material-icons">face</span>
+                        Blush
+                    </button>
+                </nav>
+
+                <div class="color-palette">
+                    <h3>Choose Color</h3>
+                    <div class="color-grid">
+                        <button class="color-btn none" title="No makeup" data-color="[0,0,0]">
+                            <span class="material-icons">not_interested</span>
+                        </button>
+                        <button class="color-btn" style="background-color: rgb(255, 105, 180);" title="Pink" data-color="[255,105,180]"></button>
+                        <button class="color-btn" style="background-color: rgb(255, 20, 147);" title="Deep Pink" data-color="[255,20,147]"></button>
+                        <button class="color-btn" style="background-color: rgb(220, 20, 60);" title="Crimson" data-color="[220,20,60]"></button>
+                        <button class="color-btn" style="background-color: rgb(255, 69, 0);" title="Red Orange" data-color="[255,69,0]"></button>
+                        <button class="color-btn" style="background-color: rgb(255, 0, 0);" title="Red" data-color="[255,0,0]"></button>
+                        <button class="color-btn" style="background-color: rgb(128, 0, 0);" title="Maroon" data-color="[128,0,0]"></button>
+                        <button class="color-btn" style="background-color: rgb(199, 21, 133);" title="Medium Violet Red" data-color="[199,21,133]"></button>
+                        <button class="color-btn" style="background-color: rgb(75, 0, 130);" title="Indigo" data-color="[75,0,130]"></button>
+                        <button class="color-btn" style="background-color: rgb(72, 61, 139);" title="Dark Slate Blue" data-color="[72,61,139]"></button>
+                    </div>
+                </div>
+
+                <div class="upload-section">
+                    <label for="file-upload" class="upload-btn">
+                        <span class="material-icons">add_a_photo</span>
+                        Upload Photo
+                    </label>
+                    <input type="file" id="file-upload" accept="image/*">
+                    <p class="or-text">or</p>
+                    <button id="start-webcam" class="webcam-btn">
+                        <span class="material-icons">videocam</span>
+                        Use Webcam
+                    </button>
+                </div>
+            </div>
+
+            <div class="preview-panel">
+                <div class="image-container">
+                    <div id="webcam-container">
+                        <video id="webcam" autoplay playsinline></video>
+                    </div>
+                    <img id="uploaded-image" style="display: none;">
+                    <div class="controls">
+                        <button id="flip-btn" class="control-btn" title="Flip Camera">
+                            <span class="material-icons">flip_camera_ios</span>
+                        </button>
+                        <button id="zoom-in-btn" class="control-btn" title="Zoom In">
+                            <span class="material-icons">add</span>
+                        </button>
+                        <button id="zoom-out-btn" class="control-btn" title="Zoom Out">
+                            <span class="material-icons">remove</span>
+                        </button>
+                        <button id="capture-btn" class="control-btn" title="Take Photo">
+                            <span class="material-icons">photo_camera</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

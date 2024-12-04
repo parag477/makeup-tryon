@@ -1,0 +1,305 @@
+:root {
+    --primary-color: #FF1493;
+    --secondary-color: #FF69B4;
+    --background-color: #f8f9fd;
+    --text-color: #2d3436;
+    --panel-bg: #ffffff;
+    --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --border-radius: 16px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 600;
+}
+
+header p {
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 2rem;
+    min-height: 600px;
+}
+
+.makeup-panel {
+    background: var(--panel-bg);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.categories {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.categories button {
+    padding: 0.8rem 1.2rem;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 1rem;
+    color: #666;
+    transition: all 0.3s ease;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    font-family: 'Poppins', sans-serif;
+}
+
+.categories button:hover {
+    background: rgba(255, 20, 147, 0.1);
+    color: var(--primary-color);
+}
+
+.categories button.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.categories button .material-icons {
+    font-size: 1.2rem;
+}
+
+.color-palette {
+    padding: 1rem 0;
+}
+
+.color-palette h3 {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+    color: #444;
+}
+
+.color-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.8rem;
+}
+
+.color-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid white;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.color-btn:hover {
+    transform: scale(1.1);
+}
+
+.color-btn.selected {
+    border: 2px solid var(--primary-color);
+    transform: scale(1.1);
+}
+
+.color-btn.none {
+    background: white;
+    border: 2px solid #ddd;
+}
+
+.color-btn.none .material-icons {
+    font-size: 20px;
+    color: #666;
+}
+
+.preview-panel {
+    background: var(--panel-bg);
+    padding: 1.5rem;
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+}
+
+.image-container {
+    position: relative;
+    width: 100%;
+    padding-top: 75%;
+    background: #f8f9fa;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+#webcam-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#webcam, #uploaded-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.controls {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.control-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    background: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    transition: all 0.2s ease;
+}
+
+.control-btn:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.upload-section {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.upload-btn, .webcam-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: 'Poppins', sans-serif;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+    width: 100%;
+}
+
+.webcam-btn {
+    background: var(--secondary-color);
+}
+
+.upload-btn:hover, .webcam-btn:hover {
+    opacity: 0.9;
+}
+
+#file-upload {
+    display: none;
+}
+
+.or-text {
+    margin: 1rem 0;
+    color: #666;
+    position: relative;
+}
+
+.or-text::before,
+.or-text::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: #ddd;
+}
+
+.or-text::before {
+    left: 0;
+}
+
+.or-text::after {
+    right: 0;
+}
+
+@media (max-width: 1024px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .makeup-panel {
+        order: 2;
+    }
+    
+    .preview-panel {
+        order: 1;
+    }
+    
+    .color-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    .color-grid {
+        grid-template-columns: repeat(5, 1fr);
+    }
+    
+    .control-btn {
+        width: 40px;
+        height: 40px;
+    }
+}
