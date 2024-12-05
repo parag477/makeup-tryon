@@ -5,13 +5,23 @@ import cv2
 import numpy as np
 from makeup_app import MakeupApplication
 import logging
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
-makeup_app = MakeupApplication()
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Initialize makeup application
+makeup_app = None
+
+def get_makeup_app():
+    global makeup_app
+    if makeup_app is None:
+        makeup_app = MakeupApplication()
+    return makeup_app
 
 # Ensure upload directory exists
 UPLOAD_FOLDER = 'uploads'
@@ -26,10 +36,16 @@ def index():
 def send_static(path):
     return send_from_directory('static', path)
 
+@app.route('/health')
+def health_check():
+    return jsonify({'status': 'healthy'}), 200
+
 @app.route('/apply_makeup', methods=['POST'])
 def apply_makeup():
     try:
         data = request.get_json()
+        if not data or 'image' not in data:
+            return jsonify({'success': False, 'error': 'No image data provided'}), 400
         
         # Get the image data
         image_data = data['image'].split(',')[1]
@@ -41,6 +57,9 @@ def apply_makeup():
         
         if image is None:
             raise ValueError("Failed to decode image")
+
+        # Get makeup application instance
+        makeup_instance = get_makeup_app()
 
         # Prepare makeup options
         makeup_options = {
@@ -63,7 +82,7 @@ def apply_makeup():
         }
         
         # Process the image
-        processed_image = makeup_app.process_frame(image, makeup_options)
+        processed_image = makeup_instance.process_frame(image, makeup_options)
         
         if processed_image is None:
             raise ValueError("Failed to process image")

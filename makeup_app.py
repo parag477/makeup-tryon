@@ -3,28 +3,33 @@ import mediapipe as mp
 import itertools
 import numpy as np
 from scipy.interpolate import splev, splprep
+from threading import Lock
 
 class MakeupApplication:
-    def __init__(self, min_detection_confidence=0.5, min_tracking_confidence=0.5):
-        # Initialize mediapipe solutions
-        self.mp_drawing = mp.solutions.drawing_utils
-        self.mp_drawing_styles = mp.solutions.drawing_styles
-        self.mp_face_mesh = mp.solutions.face_mesh
-        # Initialize face mesh with static image mode to prevent timestamp issues
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
-            static_image_mode=True,
-            max_num_faces=1,
-            refine_landmarks=True,
-            min_detection_confidence=min_detection_confidence,
-            min_tracking_confidence=min_tracking_confidence
-        )
+    def __init__(self):
+        self._face_mesh = None
+        self._face_mesh_lock = Lock()
+        self.LEFT_EYE_INDEXES = list(set(itertools.chain(*mp.solutions.face_mesh.FACEMESH_LEFT_EYE)))
+        self.RIGHT_EYE_INDEXES = list(set(itertools.chain(*mp.solutions.face_mesh.FACEMESH_RIGHT_EYE)))
+        self.LIPS_INDEXES = list(set(itertools.chain(*mp.solutions.face_mesh.FACEMESH_LIPS)))
+        self.LEFT_EYEBROW_INDEXES = list(set(itertools.chain(*mp.solutions.face_mesh.FACEMESH_LEFT_EYEBROW)))
+        self.RIGHT_EYEBROW_INDEXES = list(set(itertools.chain(*mp.solutions.face_mesh.FACEMESH_RIGHT_EYEBROW)))
+        self.EYELINER_INDEXES = [33, 133, 157, 158, 159, 160, 161, 246, 362, 398, 384, 385, 386, 387, 388, 466]
 
-        # Precompute index lists for facial landmarks
-        self.LEFT_EYE_INDEXES = list(set(itertools.chain(*self.mp_face_mesh.FACEMESH_LEFT_EYE)))
-        self.RIGHT_EYE_INDEXES = list(set(itertools.chain(*self.mp_face_mesh.FACEMESH_RIGHT_EYE)))
-        self.LIPS_INDEXES = list(set(itertools.chain(*self.mp_face_mesh.FACEMESH_LIPS)))
-        self.LEFT_EYEBROW_INDEXES = list(set(itertools.chain(*self.mp_face_mesh.FACEMESH_LEFT_EYEBROW)))
-        self.RIGHT_EYEBROW_INDEXES = list(set(itertools.chain(*self.mp_face_mesh.FACEMESH_RIGHT_EYEBROW)))
+    @property
+    def face_mesh(self):
+        if self._face_mesh is None:
+            with self._face_mesh_lock:
+                if self._face_mesh is None:  # Double-check pattern
+                    mp_face_mesh = mp.solutions.face_mesh
+                    self._face_mesh = mp_face_mesh.FaceMesh(
+                        static_image_mode=True,
+                        max_num_faces=1,
+                        refine_landmarks=True,
+                        min_detection_confidence=0.5,
+                        min_tracking_confidence=0.5
+                    )
+        return self._face_mesh
 
     def get_upper_side_coordinates(self, eye_landmarks):
         sorted_landmarks = sorted(eye_landmarks, key=lambda coord: coord.y)
@@ -36,28 +41,34 @@ class MakeupApplication:
         half_length = len(sorted_landmarks) // 2
         return sorted_landmarks[half_length:]
 
-    def apply_lipstick(self, image, landmarks, indexes, color, blur_kernel_size=(7, 7), blur_sigma=10, color_intensity=0.4):
-        points = np.array([(int(landmarks[idx].x * image.shape[1]), int(landmarks[idx].y * image.shape[0])) for idx in indexes])
-
-        mask = np.zeros(image.shape[:2], dtype=np.uint8)
-        cv2.fillPoly(mask, [cv2.convexHull(points)], 255)
-
-        boundary_mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
-
-        colored_image = np.zeros_like(image)
-        colored_image[:] = color
-
-        lipstick_image = cv2.bitwise_and(colored_image, colored_image, mask=boundary_mask)
-        lips_colored = cv2.addWeighted(image, 1, lipstick_image, color_intensity, 0)
-
-        blurred = cv2.GaussianBlur(lips_colored, blur_kernel_size, blur_sigma)
-
-        gradient_mask = cv2.GaussianBlur(boundary_mask, (15, 15), 0)
-        gradient_mask = gradient_mask / 255.0
-        lips_with_gradient = (blurred * gradient_mask[..., np.newaxis] + image * (1 - gradient_mask[..., np.newaxis])).astype(np.uint8)
-
-        final_image = np.where(boundary_mask[..., np.newaxis] == 0, image, lips_with_gradient)
-        return final_image
+    def apply_lipstick(self, frame, landmarks, lips_indices, color=(0, 0, 255), alpha=0.4, blur_radius=5):
+        try:
+            mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
+            points = []
+            for idx in lips_indices:
+                landmark = landmarks[idx]
+                x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
+                points.append([x, y])
+            
+            points = np.array(points, dtype=np.int32)
+            cv2.fillPoly(mask, [points], 255)
+            
+            # Apply Gaussian blur to create smooth edges
+            mask = cv2.GaussianBlur(mask, (blur_radius, blur_radius), 0)
+            
+            # Create colored overlay
+            colored_mask = frame.copy()
+            colored_mask[mask > 0] = color
+            
+            # Blend the original frame with the colored mask
+            mask = mask.astype(float) / 255
+            mask = np.stack([mask, mask, mask], axis=-1)
+            frame = frame.astype(float) * (1 - mask * alpha) + colored_mask.astype(float) * (mask * alpha)
+            
+            return frame.astype(np.uint8)
+        except Exception as e:
+            print(f"Error in apply_lipstick: {str(e)}")
+            return frame
 
     def draw_eyeliner(self, image, upper_eye_coordinates, color=(14, 14, 18), thickness=2, fade_factor=0.6):
         result_image = image.copy()
@@ -161,22 +172,19 @@ class MakeupApplication:
                 'blush': {'enabled': True, 'color': (130, 119, 255)}
             }
 
-        # Convert to RGB for MediaPipe
-        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        
-        # Process the frame
         try:
-            # Set image as not writeable to improve performance
-            rgb_frame.flags.writeable = False
-            results = self.face_mesh.process(rgb_frame)
-            rgb_frame.flags.writeable = True
+            # Convert to RGB for MediaPipe
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            
+            # Process the frame
+            result = self.face_mesh.process(rgb_frame)
 
             # If no face is detected, return the original frame
-            if not results.multi_face_landmarks:
+            if not result.multi_face_landmarks:
                 return frame
 
             # Process detected face
-            for face_landmarks in results.multi_face_landmarks:
+            for face_landmarks in result.multi_face_landmarks:
                 # Create a copy of the frame for modifications
                 processed_frame = frame.copy()
 
@@ -202,16 +210,12 @@ class MakeupApplication:
                 if makeup_options.get('blush', {}).get('enabled', False):
                     left_cheek_indices = [449,450,348,330,266,425,411,352,345,346]
                     right_cheek_indices = [31,111,123,187,205,36,101,119,230,229,228]
-                    # left_cheek_indices = [449, 450, 348, 330, 266, 425, 411, 352, 345, 346]
-                    # right_cheek_indices = [31, 111, 123, 187, 205, 36, 101, 119, 230, 229, 228]
                     blush_color = makeup_options['blush'].get('color', (130, 119, 255))
                     processed_frame = self.apply_blush(processed_frame, left_cheek_indices, right_cheek_indices, color=blush_color)
 
                 if makeup_options.get('eyeshadow', {}).get('enabled', False):
                     left_eye_shadow_indices = [157,56,222,223,224,225,113,247,30,29,27,28]
                     right_eye_shadow_indices = [384,286,258,442,443,444,445,342,388,387,386,385]
-                    # left_eye_shadow_indices = [156, 224, 223, 222, 56, 190, 133, 173, 157, 158, 159, 160, 161, 246, 33, 130]
-                    # right_eye_shadow_indices = [384, 385, 386, 387, 388, 466, 263, 359, 255, 339, 254, 253, 252, 256, 341, 463]
                     eyeshadow_color = makeup_options['eyeshadow'].get('color', (91, 123, 195))
                     processed_frame = self.apply_eyeshadow(processed_frame, left_eye_shadow_indices, right_eye_shadow_indices, color=eyeshadow_color)
 
