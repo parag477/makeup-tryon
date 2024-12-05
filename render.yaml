@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: virtual-makeup-tryon
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.7
+    healthCheckPath: /
+    autoDeploy: false
