@@ -2,10 +2,14 @@ services:
   - type: web
     name: virtual-makeup-tryon
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: |
+      apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
+      pip install -r requirements.txt
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.7
+      - key: PYTHONUNBUFFERED
+        value: "true"
     healthCheckPath: /
     autoDeploy: false
