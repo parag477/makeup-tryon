@@ -208,7 +208,7 @@ class MakeupApplication:
                     processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,EYELINER_RIGHT)
 
                     eyeliner_color = makeup_options['eyeliner'].get('color', (14, 14, 18))
-                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,eyeliner_color)
+                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,EYELINER_RIGHT)
 
                 if makeup_options.get('lipstick', {}).get('enabled', False):
                     lipstick_color = makeup_options['lipstick'].get('color', (0, 0, 255))
