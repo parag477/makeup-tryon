@@ -41,58 +41,72 @@ class MakeupApplication:
         half_length = len(sorted_landmarks) // 2
         return sorted_landmarks[half_length:]
 
-    def apply_lipstick(self, frame, landmarks, lips_indices, color=(0, 0, 255), alpha=0.4, blur_radius=5):
-        try:
-            mask = np.zeros((frame.shape[0], frame.shape[1]), dtype=np.uint8)
-            points = []
-            for idx in lips_indices:
-                landmark = landmarks[idx]
-                x, y = int(landmark.x * frame.shape[1]), int(landmark.y * frame.shape[0])
-                points.append([x, y])
-            
-            points = np.array(points, dtype=np.int32)
-            cv2.fillPoly(mask, [points], 255)
-            
-            # Apply Gaussian blur to create smooth edges
-            mask = cv2.GaussianBlur(mask, (blur_radius, blur_radius), 0)
-            
-            # Create colored overlay
-            colored_mask = frame.copy()
-            colored_mask[mask > 0] = color
-            
-            # Blend the original frame with the colored mask
-            mask = mask.astype(float) / 255
-            mask = np.stack([mask, mask, mask], axis=-1)
-            frame = frame.astype(float) * (1 - mask * alpha) + colored_mask.astype(float) * (mask * alpha)
-            
-            return frame.astype(np.uint8)
-        except Exception as e:
-            print(f"Error in apply_lipstick: {str(e)}")
-            return frame
+    def apply_lipstick(self, image, landmarks, indexes, color, blur_kernel_size=(7, 7), blur_sigma=3, color_intensity=0.2):
+        points = np.array([(int(landmarks[idx].x * image.shape[1]), int(landmarks[idx].y * image.shape[0])) for idx in indexes])
 
-    def draw_eyeliner(self, image, upper_eye_coordinates, color=(14, 14, 18), thickness=2, fade_factor=0.6):
-        result_image = image.copy()
-        
-        eyeliner_points = [(int(landmark.x * image.shape[1]), int(landmark.y * image.shape[0])) for landmark in upper_eye_coordinates]
-        eyeliner_points.sort(key=lambda x: x[0])
-        eyeliner_points = np.array(eyeliner_points, dtype=np.int32)
+        mask = np.zeros(image.shape[:2], dtype=np.uint8)
+        cv2.fillPoly(mask, [cv2.convexHull(points)], 255)
 
-        if len(eyeliner_points) >= 4:
-            spline_curve = cv2.polylines(np.zeros_like(image), [eyeliner_points], isClosed=False, color=(255, 255, 255), thickness=thickness)
+        boundary_mask = cv2.dilate(mask, np.ones((3, 3), np.uint8), iterations=1)
 
-        for i in range(len(eyeliner_points) - 1):
-            start_point = tuple(eyeliner_points[i])
-            end_point = tuple(eyeliner_points[i + 1])
+        colored_image = np.zeros_like(image)
+        colored_image[:] = color
 
-            relative_pos = i / (len(eyeliner_points) - 1)
-            dynamic_thickness = int(thickness * (1 - fade_factor * abs(relative_pos - 0.5)))
+        lipstick_image = cv2.bitwise_and(colored_image, colored_image, mask=boundary_mask)
+        lips_colored = cv2.addWeighted(image, 1, lipstick_image, color_intensity, 0)
 
-            cv2.line(result_image, start_point, end_point, color, dynamic_thickness)
+        blurred = cv2.GaussianBlur(lips_colored, blur_kernel_size, blur_sigma)
 
-        blurred_result = cv2.GaussianBlur(result_image, (3, 3), 1)
-        final_result = cv2.addWeighted(result_image, 0.9, blurred_result, 0.1, 0)
+        gradient_mask = cv2.GaussianBlur(boundary_mask, (15, 15), 0)
+        gradient_mask = gradient_mask / 255.0
+        lips_with_gradient = (blurred * gradient_mask[..., np.newaxis] + image * (1 - gradient_mask[..., np.newaxis])).astype(np.uint8)
 
-        return final_result
+        final_image = np.where(boundary_mask[..., np.newaxis] == 0, image, lips_with_gradient)
+        return final_image
+
+    def apply_eyeliner(self, frame, left_eye_indices, right_eye_indices, color=(0, 0, 0), thickness=1, alpha=0.3):
+        # Convert the frame to RGB for processing
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        result = self.face_mesh.process(rgb_frame)
+
+        if result.multi_face_landmarks:
+            h, w, _ = frame.shape
+
+            # Create a transparent overlay for blending
+            overlay = frame.copy()
+
+            for face_landmarks in result.multi_face_landmarks:
+                # Function to draw smooth eyeliner along the eye contour
+                def draw_smooth_eyeliner(eye_indices):
+                    # Extract eye region coordinates
+                    eye_points = np.array([
+                        [
+                            int(face_landmarks.landmark[idx].x * w),
+                            int(face_landmarks.landmark[idx].y * h)
+                        ]
+                        for idx in eye_indices
+                    ], np.int32)
+
+                    # Smooth the eyeliner path using polylines
+                    smooth_eye_path = cv2.polylines(
+                        overlay, [eye_points], isClosed=False, color=color, thickness=thickness, lineType=cv2.LINE_AA
+                    )
+
+                    # Add a tapered effect: thinning at the inner and outer corners
+                    for i in range(len(eye_points) - 1):
+                        start_point = tuple(eye_points[i])
+                        end_point = tuple(eye_points[i + 1])
+                        current_thickness = max(1, thickness - i)  # Taper the thickness
+                        cv2.line(overlay, start_point, end_point, color, current_thickness, lineType=cv2.LINE_AA)
+
+                # Apply the eyeliner to both eyes
+                draw_smooth_eyeliner(left_eye_indices)
+                draw_smooth_eyeliner(right_eye_indices)
+
+            # Blend the overlay with the original frame for transparency
+            frame = cv2.addWeighted(overlay, alpha, frame, 1 - alpha, 0)
+
+        return frame
 
     def apply_eyeshadow(self, frame, left_eye_indices, right_eye_indices, color=(130, 50, 200), alpha=0.25, blur_radius=25):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -189,19 +203,12 @@ class MakeupApplication:
                 processed_frame = frame.copy()
 
                 if makeup_options.get('eyeliner', {}).get('enabled', False):
-                    left_eye_landmarks = [face_landmarks.landmark[idx] for idx in self.LEFT_EYE_INDEXES]
-                    right_eye_landmarks = [face_landmarks.landmark[idx] for idx in self.RIGHT_EYE_INDEXES]
-                    
-                    upper_left_eye = self.get_upper_side_coordinates(left_eye_landmarks)
-                    upper_right_eye = self.get_upper_side_coordinates(right_eye_landmarks)
-                    lower_left_eye = self.get_lower_side_coordinates(left_eye_landmarks)
-                    lower_right_eye = self.get_lower_side_coordinates(right_eye_landmarks)
+                    EYELINER_LEFT = [359,263,466,388,387,386,385,384,398]
+                    EYELINER_RIGHT = [130,33,246,161,160,159,158,157,173,133]
+                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,EYELINER_RIGHT)
 
                     eyeliner_color = makeup_options['eyeliner'].get('color', (14, 14, 18))
-                    processed_frame = self.draw_eyeliner(processed_frame, upper_left_eye, color=eyeliner_color)
-                    processed_frame = self.draw_eyeliner(processed_frame, upper_right_eye, color=eyeliner_color)
-                    processed_frame = self.draw_eyeliner(processed_frame, lower_left_eye, color=eyeliner_color)
-                    processed_frame = self.draw_eyeliner(processed_frame, lower_right_eye, color=eyeliner_color)
+                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,eyeliner_color)
 
                 if makeup_options.get('lipstick', {}).get('enabled', False):
                     lipstick_color = makeup_options['lipstick'].get('color', (0, 0, 255))
