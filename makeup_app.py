@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 from scipy.interpolate import splev, splprep
 from threading import Lock
+import base64
 
 class MakeupApplication:
     def __init__(self):
@@ -191,6 +192,71 @@ class MakeupApplication:
             frame = cv2.addWeighted(blurred_mask, 1, frame, 1 - alpha, 0)
 
         return frame
+
+    def apply_makeup(self, image_data, makeup_options):
+        """Apply makeup to the image based on the provided options."""
+        try:
+            # Decode base64 image
+            image_data = image_data.split(',')[1] if ',' in image_data else image_data
+            image_bytes = base64.b64decode(image_data)
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            # Get face landmarks
+            results = self.face_mesh.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            if not results.multi_face_landmarks:
+                return None, "No face detected"
+
+            # Create a copy of the image for makeup application
+            result_image = image.copy()
+
+            # Apply each type of makeup if enabled
+            for face_landmarks in results.multi_face_landmarks:
+                if makeup_options.get('lipstick_enabled', False):
+                    result_image = self.apply_lipstick(
+                        result_image, 
+                        face_landmarks, 
+                        self.LIPS_INDEXES, 
+                        makeup_options.get('lipstick_color', [0, 0, 255])
+                    )
+                
+                if makeup_options.get('eyeliner_enabled', False):
+                    EYELINER_LEFT = [359,263,466,388,387,386,385,384,398]
+                    EYELINER_RIGHT = [130,33,246,161,160,159,158,157,173]
+                    result_image = self.apply_eyeliner(
+                        result_image, 
+                        EYELINER_LEFT, 
+                        EYELINER_RIGHT, 
+                        makeup_options.get('eyeliner_color', [14, 14, 18])
+                    )
+                
+                if makeup_options.get('eyeshadow_enabled', False):
+                    left_eye_shadow_indices = [157,56,222,223,224,225,113,247,160,159,158]
+                    right_eye_shadow_indices = [384,286,258,442,443,444,445,342,388,387,386,385]
+                    result_image = self.apply_eyeshadow(
+                        result_image, 
+                        left_eye_shadow_indices, 
+                        right_eye_shadow_indices, 
+                        makeup_options.get('eyeshadow_color', [91, 123, 195])
+                    )
+                
+                if makeup_options.get('blush_enabled', False):
+                    left_cheek_indices = [449,450,348,330,266,425,411,352,345,346]
+                    right_cheek_indices = [31,111,123,187,205,36,101,119,230,229,228]
+                    result_image = self.apply_blush(
+                        result_image, 
+                        left_cheek_indices, 
+                        right_cheek_indices, 
+                        makeup_options.get('blush_color', [130, 119, 255])
+                    )
+
+            # Convert the result image to base64
+            _, buffer = cv2.imencode('.jpg', result_image)
+            image_base64 = base64.b64encode(buffer).decode('utf-8')
+            return image_base64, None
+
+        except Exception as e:
+            return None, str(e)
 
     def process_frame(self, frame, makeup_options=None):
         if makeup_options is None:

@@ -17,44 +17,132 @@
 
         <div class="main-content">
             <div class="makeup-panel">
-                <nav class="categories">
-                    <button class="active" data-category="all">
-                        <span class="material-icons">auto_awesome</span>
-                        All
-                    </button>
-                    <button data-category="lipstick">
-                        <span class="material-icons">favorite</span>
-                        Lipstick
-                    </button>
-                    <button data-category="eyeshadow">
-                        <span class="material-icons">remove_red_eye</span>
-                        Eye Shadow
-                    </button>
-                    <button data-category="eyeliner">
-                        <span class="material-icons">brush</span>
-                        Eye Liner
-                    </button>
-                    <button data-category="blush">
-                        <span class="material-icons">face</span>
-                        Blush
-                    </button>
-                </nav>
+                <div class="makeup-types">
+                    <div class="makeup-type" data-type="lipstick">
+                        <div class="type-header">
+                            <span class="material-icons">favorite</span>
+                            <h3>Lipstick</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked data-type="lipstick">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="color-grid">
+                            <button class="color-btn" style="background-color: rgb(255, 128, 171);" title="Pink" data-type="lipstick" data-color="[255, 128, 171]"></button>
+                            <button class="color-btn" style="background-color: rgb(255, 64, 129);" title="Deep Pink" data-type="lipstick" data-color="[255, 64, 129]"></button>
+                            <button class="color-btn" style="background-color: rgb(245, 0, 87);" title="Crimson" data-type="lipstick" data-color="[245, 0, 87]"></button>
+                            <button class="color-btn" style="background-color: rgb(197, 17, 98);" title="Red Orange" data-type="lipstick" data-color="[197, 17, 98]"></button>
+                            <button class="color-btn" style="background-color: rgb(252, 228, 236);" title="Red" data-type="lipstick" data-color="[252, 228, 236]"></button>
+                            <button class="color-btn" style="background-color: rgb(248, 187, 208);" title="Pink" data-type="lipstick" data-color="[248, 187, 208]"></button>
+                            <button class="color-btn" style="background-color: rgb(244, 143, 177);" title="Deep Pink" data-type="lipstick" data-color="[244, 143, 177]"></button>
+                            <button class="color-btn" style="background-color: rgb(240, 98, 146);" title="Crimson" data-type="lipstick" data-color="[240, 98, 146]"></button>
+                            <button class="color-btn" style="background-color: rgb(236, 64, 122);" title="Red Orange" data-type="lipstick" data-color="[236, 64, 122]"></button>
+                            <button class="color-btn" style="background-color: rgb(233, 30, 99);" title="Red" data-type="lipstick" data-color="[233, 30, 99]"></button>
+                            <button class="color-btn" style="background-color: rgb(216, 27, 96);" title="Pink" data-type="lipstick" data-color="[216, 27, 96]"></button>
+                            <button class="color-btn" style="background-color: rgb(194, 24, 91);" title="Deep Pink" data-type="lipstick" data-color="[194, 24, 91]"></button>
+                            <button class="color-btn" style="background-color: rgb(173, 20, 87);" title="Crimson" data-type="lipstick" data-color="[173, 20, 87]"></button>
+                            <button class="color-btn" style="background-color: rgb(136, 14, 79);" title="Red Orange" data-type="lipstick" data-color="[136, 14, 79]"></button>
+                        </div>
+                    </div>
 
-                <div class="color-palette">
-                    <h3>Choose Color</h3>
-                    <div class="color-grid">
-                        <button class="color-btn none" title="No makeup" data-color="[0,0,0]">
-                            <span class="material-icons">not_interested</span>
-                        </button>
-                        <button class="color-btn" style="background-color: rgb(255, 105, 180);" title="Pink" data-color="[255,105,180]"></button>
-                        <button class="color-btn" style="background-color: rgb(255, 20, 147);" title="Deep Pink" data-color="[255,20,147]"></button>
-                        <button class="color-btn" style="background-color: rgb(220, 20, 60);" title="Crimson" data-color="[220,20,60]"></button>
-                        <button class="color-btn" style="background-color: rgb(255, 69, 0);" title="Red Orange" data-color="[255,69,0]"></button>
-                        <button class="color-btn" style="background-color: rgb(255, 0, 0);" title="Red" data-color="[255,0,0]"></button>
-                        <button class="color-btn" style="background-color: rgb(128, 0, 0);" title="Maroon" data-color="[128,0,0]"></button>
-                        <button class="color-btn" style="background-color: rgb(199, 21, 133);" title="Medium Violet Red" data-color="[199,21,133]"></button>
-                        <button class="color-btn" style="background-color: rgb(75, 0, 130);" title="Indigo" data-color="[75,0,130]"></button>
-                        <button class="color-btn" style="background-color: rgb(72, 61, 139);" title="Dark Slate Blue" data-color="[72,61,139]"></button>
+                    <div class="makeup-type" data-type="eyeshadow">
+                        <div class="type-header">
+                            <span class="material-icons">remove_red_eye</span>
+                            <h3>Eye Shadow</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked data-type="eyeshadow">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="color-grid">
+                            <button class="color-btn" style="background-color: rgb(138, 80, 73);" title="Purple" data-type="eyeshadow" data-color="[138, 80, 73]"></button>
+                            <button class="color-btn" style="background-color: rgb(223, 186, 146);" title="Blue Violet" data-type="eyeshadow" data-color="[223, 186, 146]"></button>
+                            <button class="color-btn" style="background-color: rgb(181, 132, 113);" title="Indigo" data-type="eyeshadow" data-color="[181, 132, 113]"></button>
+                            <button class="color-btn" style="background-color: rgb(220, 178, 140);" title="Dark Slate" data-type="eyeshadow" data-color="[220, 178, 140]"></button>
+                            <button class="color-btn" style="background-color: rgb(242, 172, 125);" title="Slate Blue" data-type="eyeshadow" data-color="[242, 172, 125]"></button>
+                            <button class="color-btn" style="background-color: rgb(141, 73, 58);" title="Slate Blue" data-type="eyeshadow" data-color="[141, 73, 58]"></button>
+
+                            <button class="color-btn" style="background-color: rgb(167, 95, 68);" title="Purple" data-type="eyeshadow" data-color="[167, 95, 68]"></button>
+                            <button class="color-btn" style="background-color: rgb(179, 108, 68);" title="Blue Violet" data-type="eyeshadow" data-color="[179, 108, 68]"></button>
+                            <button class="color-btn" style="background-color: rgb(93, 57, 34);" title="Indigo" data-type="eyeshadow" data-color="[93, 57, 34]"></button>
+                            <button class="color-btn" style="background-color: rgb(199, 127, 103);" title="Dark Slate" data-type="eyeshadow" data-color="[199, 127, 103]"></button>
+                            <button class="color-btn" style="background-color: rgb(184, 156, 169);" title="Slate Blue" data-type="eyeshadow" data-color="[184, 156, 169]"></button>
+                            <button class="color-btn" style="background-color: rgb(166, 100, 104);" title="Slate Blue" data-type="eyeshadow" data-color="[166, 100, 104]"></button>
+                            
+                            <button class="color-btn" style="background-color: rgb(125, 80, 71);" title="Purple" data-type="eyeshadow" data-color="[125, 80, 71]"></button>
+                            <button class="color-btn" style="background-color: rgb(223, 190, 189);" title="Blue Violet" data-type="eyeshadow" data-color="[223, 190, 189]"></button>
+                            <button class="color-btn" style="background-color: rgb(189, 158, 137);" title="Indigo" data-type="eyeshadow" data-color="[189, 158, 137]"></button>
+                            <button class="color-btn" style="background-color: rgb(163, 103, 79);" title="Dark Slate" data-type="eyeshadow" data-color="[163, 103, 79]"></button>
+                            <button class="color-btn" style="background-color: rgb(234, 208, 194);" title="Slate Blue" data-type="eyeshadow" data-color="[234, 208, 194]"></button>
+                            <button class="color-btn" style="background-color: rgb(219, 186, 172);" title="Slate Blue" data-type="eyeshadow" data-color="[219, 186, 172]"></button>
+
+                        </div>
+                    </div>
+
+                    <div class="makeup-type" data-type="eyeliner">
+                        <div class="type-header">
+                            <span class="material-icons">brush</span>
+                            <h3>Eye Liner</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked data-type="eyeliner">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="color-grid">
+                            <button class="color-btn" style="background-color: rgb(14, 14, 18);" title="Black" data-type="eyeliner" data-color="[14, 14, 18]"></button>
+                            <button class="color-btn" style="background-color: rgb(98, 13, 30);" title="Dark Slate Gray" data-type="eyeliner" data-color="[98, 13, 30]"></button>
+                            <button class="color-btn" style="background-color: rgb(111, 66, 51);" title="Midnight Blue" data-type="eyeliner" data-color="[111, 66, 51]"></button>
+                            <button class="color-btn" style="background-color: rgb(230, 98, 114);" title="Dark Olive Green" data-type="eyeliner" data-color="[230, 98, 114]"></button>
+                            <button class="color-btn" style="background-color: rgb(67, 45, 110);" title="Maroon" data-type="eyeliner" data-color="[67, 45, 110]"></button>
+                            <button class="color-btn" style="background-color: rgb(21, 26, 93);" title="Midnight Blue" data-type="eyeliner" data-color="[21, 26, 93]"></button>
+                            <button class="color-btn" style="background-color: rgb(6, 178, 211);" title="Dark Olive Green" data-type="eyeliner" data-color="[6, 178, 211]"></button>
+                            <button class="color-btn" style="background-color: rgb(16, 139, 128);" title="Maroon" data-type="eyeliner" data-color="[16, 139, 128]"></button>
+                            <button class="color-btn" style="background-color: rgb(237, 179, 33);" title="Midnight Blue" data-type="eyeliner" data-color="[237, 179, 33]"></button>
+                            <button class="color-btn" style="background-color: rgb(225, 58, 58);" title="Dark Olive Green" data-type="eyeliner" data-color="[225, 58, 58]"></button>
+                            <button class="color-btn" style="background-color: rgb(156, 0, 16);" title="Maroon" data-type="eyeliner" data-color="[156, 0, 16]"></button>
+                        </div>
+                    </div>
+
+                    <div class="makeup-type" data-type="blush">
+                        <div class="type-header">
+                            <span class="material-icons">face</span>
+                            <h3>Blush</h3>
+                            <label class="switch">
+                                <input type="checkbox" checked data-type="blush">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                        <div class="color-grid">
+                            <button class="color-btn" style="background-color: rgb(246, 153, 205);" title="Pink" data-type="blush" data-color="[246, 153, 205]"></button>
+                            <button class="color-btn" style="background-color: rgb(252, 148, 175);" title="Rose" data-type="blush" data-color="[252, 148, 175]"></button>
+                            <button class="color-btn" style="background-color: rgb(252, 70, 170);" title="Fuscia" data-type="blush" data-color="[252, 70, 170]"></button>
+                            <button class="color-btn" style="background-color: rgb(242, 82, 120);" title="Punch" data-type="blush" data-color="[242, 82, 120]"></button>
+                            <button class="color-btn" style="background-color: rgb(254, 197, 229);" title="Blush" data-type="blush" data-color="[254, 197, 229]"></button>
+
+                            <button class="color-btn" style="background-color: rgb(254, 127, 156);" title="Watermelon" data-type="blush" data-color="[254, 127, 156]"></button>
+                            <button class="color-btn" style="background-color: rgb(253, 164, 186);" title="Flamingo" data-type="blush" data-color="[253, 164, 186]"></button>
+                            <button class="color-btn" style="background-color: rgb(242, 107, 138);" title="Rouge" data-type="blush" data-color="[242, 107, 138]"></button>
+                            <button class="color-btn" style="background-color: rgb(253, 171, 159);" title="Salmon" data-type="blush" data-color="[253, 171, 159]"></button>
+                            <button class="color-btn" style="background-color: rgb(254, 125, 106);" title="Coral" data-type="blush" data-color="[254, 125, 106]"></button>
+
+                            <button class="color-btn" style="background-color: rgb(252, 148, 131);" title="Peach" data-type="blush" data-color="[252, 148, 131]"></button>
+                            <button class="color-btn" style="background-color: rgb(252, 76, 78);" title="Strawberry" data-type="blush" data-color="[252, 76, 78]"></button>
+                            <button class="color-btn" style="background-color: rgb(158, 66, 68);" title="Rosewood" data-type="blush" data-color="[158, 66, 68]"></button>
+                            <button class="color-btn" style="background-color: rgb(252, 186, 203);" title="Lemonade" data-type="blush" data-color="[252, 186, 203]"></button>
+                            <button class="color-btn" style="background-color: rgb(250, 134, 196);" title="Taffy" data-type="blush" data-color="[250, 134, 196]"></button>
+
+                            <button class="color-btn" style="background-color: rgb(253, 93, 168);" title="Bubblegum" data-type="blush" data-color="[253, 93, 168]"></button>
+                            <button class="color-btn" style="background-color: rgb(247, 154, 192);" title="Ballet Slipper" data-type="blush" data-color="[247, 154, 192]"></button>
+                            <button class="color-btn" style="background-color: rgb(242, 184, 198);" title="Crepe" data-type="blush" data-color="[242, 184, 198]"></button>
+                            <button class="color-btn" style="background-color: rgb(225, 21, 132);" title="Magenta" data-type="blush" data-color="[225, 21, 132]"></button>
+                            <button class="color-btn" style="background-color: rgb(255, 22, 148);" title="Hot Pink" data-type="blush" data-color="[255, 22, 148]"></button>
+
+                            <button class="color-btn" style="background-color: rgb(255, 209, 220);" title="Pastel Pink" data-type="blush" data-color="[255, 209, 220]"></button>
+                            <button class="color-btn" style="background-color: rgb(231, 84, 128);" title="Dark Pink" data-type="blush" data-color="[231, 84, 128]"></button>
+                            <button class="color-btn" style="background-color: rgb(255, 0, 127);" title="Bright Pink" data-type="blush" data-color="[255, 0, 127]"></button>
+                            <button class="color-btn" style="background-color: rgb(255, 110, 199);" title="Neon Pink" data-type="blush" data-color="[255, 110, 199]"></button>
+                            <button class="color-btn" style="background-color: rgb(193, 84, 193);" title="Fuchsia" data-type="blush" data-color="[193, 84, 193]"></button>
+                        </div>
                     </div>
                 </div>
 
