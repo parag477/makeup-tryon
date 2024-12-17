@@ -109,7 +109,7 @@ class MakeupApplication:
 
         return frame
 
-    def apply_eyeshadow(self, frame, left_eye_indices, right_eye_indices, color=(130, 50, 200), alpha=0.15, blur_radius=25):
+    def apply_eyeshadow(self, frame, left_eye_indices, right_eye_indices, color=(130, 50, 200), alpha=0.17, blur_radius=35):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = self.face_mesh.process(rgb_frame) 
 
