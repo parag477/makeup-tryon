@@ -89,32 +89,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Initialize the worker
-    const worker = new Worker('worker.js');
-
-    worker.onmessage = function(event) {
-        // Handle the processed image
-        const processedImage = event.data;
-        currentImage = processedImage;
-        applyMakeup();
-    };
-
-    function captureAndProcess() {
-        if (!webcam.srcObject) return;
-
-        // Create a canvas to capture the frame
-        const canvas = document.createElement('canvas');
-        canvas.width = webcam.videoWidth;
-        canvas.height = webcam.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(webcam, 0, 0);
-
-        // Send the image data to the worker
-        const imageData = canvas.toDataURL('image/jpeg');
-        worker.postMessage(imageData);
-
-        // Use requestAnimationFrame for the next frame
-        requestAnimationFrame(captureAndProcess);
+    // Capture and process frame
+    async function captureAndProcess() {
+        if (webcam.srcObject) {
+            const canvas = document.createElement('canvas');
+            canvas.width = webcam.videoWidth;
+            canvas.height = webcam.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(webcam, 0, 0);
+            
+            const imageData = canvas.toDataURL('image/jpeg');
+            currentImage = imageData;
+            
+            await applyMakeup();
+            
+            if (webcam.srcObject) {
+                requestAnimationFrame(captureAndProcess);
+            }
+        }
     }
 
     // File upload handling
