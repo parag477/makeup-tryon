@@ -28,6 +28,13 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+# Update static file paths to use S3
+app.config['STATIC_URL'] = 'https://virtual-makeup-static.s3.amazonaws.com/static/'
+
+@app.context_processor
+def utility_processor():
+    return dict(static_url=app.config['STATIC_URL'])
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -38,7 +45,11 @@ def send_static(path):
 
 @app.route('/health')
 def health_check():
-    return jsonify({'status': 'healthy'}), 200
+    return jsonify({"status": "healthy"}), 200
+
+@app.route('/health_check')
+def health_check_endpoint():
+    return jsonify({"status": "healthy"}), 200
 
 @app.route('/apply_makeup', methods=['POST'])
 def apply_makeup():

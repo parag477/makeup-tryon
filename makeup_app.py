@@ -4,6 +4,7 @@ import itertools
 import numpy as np
 from scipy.interpolate import splev, splprep
 from threading import Lock
+import base64
 
 class MakeupApplication:
     def __init__(self):
@@ -64,7 +65,7 @@ class MakeupApplication:
         final_image = np.where(boundary_mask[..., np.newaxis] == 0, image, lips_with_gradient)
         return final_image
 
-    def apply_eyeliner(self, frame, left_eye_indices, right_eye_indices, color=(0, 0, 0), thickness=1, alpha=0.3):
+    def apply_eyeliner(self, frame, left_eye_indices, right_eye_indices, color=(0, 0, 0), thickness=2, alpha=0.2):
         # Convert the frame to RGB for processing
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = self.face_mesh.process(rgb_frame)
@@ -88,8 +89,8 @@ class MakeupApplication:
                     ], np.int32)
 
                     # Smooth the eyeliner path using polylines
-                    smooth_eye_path = cv2.polylines(
-                        overlay, [eye_points], isClosed=False, color=color, thickness=thickness, lineType=cv2.LINE_AA
+                    cv2.polylines(
+                        overlay, [eye_points], isClosed=False, color=tuple(map(int, color)), thickness=thickness, lineType=cv2.LINE_AA
                     )
 
                     # Add a tapered effect: thinning at the inner and outer corners
@@ -97,7 +98,7 @@ class MakeupApplication:
                         start_point = tuple(eye_points[i])
                         end_point = tuple(eye_points[i + 1])
                         current_thickness = max(1, thickness - i)  # Taper the thickness
-                        cv2.line(overlay, start_point, end_point, color, current_thickness, lineType=cv2.LINE_AA)
+                        cv2.line(overlay, start_point, end_point, tuple(map(int, color)), current_thickness, lineType=cv2.LINE_AA)
 
                 # Apply the eyeliner to both eyes
                 draw_smooth_eyeliner(left_eye_indices)
@@ -108,7 +109,7 @@ class MakeupApplication:
 
         return frame
 
-    def apply_eyeshadow(self, frame, left_eye_indices, right_eye_indices, color=(130, 50, 200), alpha=0.25, blur_radius=25):
+    def apply_eyeshadow(self, frame, left_eye_indices, right_eye_indices, color=(130, 50, 200), alpha=0.17, blur_radius=35):
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = self.face_mesh.process(rgb_frame) 
 
@@ -139,43 +140,123 @@ class MakeupApplication:
 
         return frame
 
-    def apply_blush(self, frame, left_cheek_indices, right_cheek_indices, color=(130, 119, 255), alpha=0.20, blur_radius=45):
+    def apply_blush(self, frame, left_cheek_indices, right_cheek_indices, color=(130, 119, 255), alpha=0.12, blur_radius=45, sparsity=0.8):
+    
+        # Convert the frame to RGB for processing
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         result = self.face_mesh.process(rgb_frame)
 
         if result.multi_face_landmarks:
             h, w, _ = frame.shape
+
+            # Create a base mask to hold the blush effect
             mask = np.zeros_like(frame, dtype=np.uint8)
 
             for face_landmarks in result.multi_face_landmarks:
                 def create_gradient_blush(cheek_indices):
+                    # Get cheek coordinates and determine center
                     cheek_points = np.array([
-                        [int(face_landmarks.landmark[idx].x * w),
-                         int(face_landmarks.landmark[idx].y * h)]
+                        [
+                            int(face_landmarks.landmark[idx].x * w),
+                            int(face_landmarks.landmark[idx].y * h)
+                        ]
                         for idx in cheek_indices
                     ], np.int32)
-                    
+
+                    # Calculate center of cheek
                     cheek_center = np.mean(cheek_points, axis=0).astype(int)
                     max_distance = np.max(np.linalg.norm(cheek_points - cheek_center, axis=1))
 
+                    # Create a local cheek mask
                     cheek_mask = np.zeros((h, w), dtype=np.float32)
-                    cv2.fillPoly(cheek_mask, [cheek_points], 1.0)
+                    cv2.fillPoly(cheek_mask, [cheek_points], 1.0)  # Fill the cheek area
 
+                    # Calculate distance from center for each pixel in cheek region
                     Y, X = np.ogrid[:h, :w]
                     distances = np.sqrt((X - cheek_center[0]) ** 2 + (Y - cheek_center[1]) ** 2)
-                    gradient_alpha = alpha * (1 - (distances / max_distance))
-                    gradient_alpha = np.clip(gradient_alpha, 0, alpha)
+                    gradient_alpha = alpha * (1 - (distances / max_distance)) * sparsity
+                    gradient_alpha = np.clip(gradient_alpha, 0, alpha)  # Limit alpha range
 
-                    for i in range(3):
+                    # Apply gradient to color and add to main mask
+                    for i in range(3):  # Apply color gradient on each channel
                         mask[:, :, i] = np.where(cheek_mask, color[i] * gradient_alpha, mask[:, :, i])
 
+                # Apply blush to each cheek
                 create_gradient_blush(left_cheek_indices)
                 create_gradient_blush(right_cheek_indices)
 
+            # Apply a slight blur to soften the edges
             blurred_mask = cv2.GaussianBlur(mask, (blur_radius, blur_radius), 0)
+
+            # Blend the blurred mask with the original frame
             frame = cv2.addWeighted(blurred_mask, 1, frame, 1 - alpha, 0)
 
         return frame
+
+    def apply_makeup(self, image_data, makeup_options):
+        """Apply makeup to the image based on the provided options."""
+        try:
+            # Decode base64 image
+            image_data = image_data.split(',')[1] if ',' in image_data else image_data
+            image_bytes = base64.b64decode(image_data)
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+            # Get face landmarks
+            results = self.face_mesh.process(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            if not results.multi_face_landmarks:
+                return None, "No face detected"
+
+            # Create a copy of the image for makeup application
+            result_image = image.copy()
+
+            # Apply each type of makeup if enabled
+            for face_landmarks in results.multi_face_landmarks:
+                if makeup_options.get('lipstick_enabled', False):
+                    result_image = self.apply_lipstick(
+                        result_image, 
+                        face_landmarks, 
+                        self.LIPS_INDEXES, 
+                        makeup_options.get('lipstick_color', [0, 0, 255])
+                    )
+                
+                if makeup_options.get('eyeliner_enabled', False):
+                    EYELINER_LEFT = [359,263,466,388,387,386,385,384,398]
+                    EYELINER_RIGHT = [130,33,246,161,160,159,158,157,173]
+                    result_image = self.apply_eyeliner(
+                        result_image, 
+                        EYELINER_LEFT, 
+                        EYELINER_RIGHT, 
+                        makeup_options.get('eyeliner_color', [14, 14, 18])
+                    )
+                
+                if makeup_options.get('eyeshadow_enabled', False):
+                    left_eye_shadow_indices = [157,56,222,223,224,225,113,247,160,159,158]
+                    right_eye_shadow_indices = [384,286,258,442,443,444,445,342,388,387,386,385]
+                    result_image = self.apply_eyeshadow(
+                        result_image, 
+                        left_eye_shadow_indices, 
+                        right_eye_shadow_indices, 
+                        makeup_options.get('eyeshadow_color', [91, 123, 195])
+                    )
+                
+                if makeup_options.get('blush_enabled', False):
+                    left_cheek_indices = [449,450,348,330,266,425,411,352,345,346]
+                    right_cheek_indices = [31,111,123,187,205,36,101,119,230,229,228]
+                    result_image = self.apply_blush(
+                        result_image, 
+                        left_cheek_indices, 
+                        right_cheek_indices, 
+                        makeup_options.get('blush_color', [130, 119, 255])
+                    )
+
+            # Convert the result image to base64
+            _, buffer = cv2.imencode('.jpg', result_image)
+            image_base64 = base64.b64encode(buffer).decode('utf-8')
+            return image_base64, None
+
+        except Exception as e:
+            return None, str(e)
 
     def process_frame(self, frame, makeup_options=None):
         if makeup_options is None:
@@ -204,11 +285,9 @@ class MakeupApplication:
 
                 if makeup_options.get('eyeliner', {}).get('enabled', False):
                     EYELINER_LEFT = [359,263,466,388,387,386,385,384,398]
-                    EYELINER_RIGHT = [130,33,246,161,160,159,158,157,173,133]
-                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,EYELINER_RIGHT)
-
+                    EYELINER_RIGHT = [130,33,246,161,160,159,158,157,173]
                     eyeliner_color = makeup_options['eyeliner'].get('color', (14, 14, 18))
-                    processed_frame = self.apply_eyeliner(processed_frame,EYELINER_LEFT,EYELINER_RIGHT)
+                    processed_frame = self.apply_eyeliner(processed_frame, EYELINER_LEFT, EYELINER_RIGHT, color=eyeliner_color)
 
                 if makeup_options.get('lipstick', {}).get('enabled', False):
                     lipstick_color = makeup_options['lipstick'].get('color', (0, 0, 255))
@@ -221,7 +300,7 @@ class MakeupApplication:
                     processed_frame = self.apply_blush(processed_frame, left_cheek_indices, right_cheek_indices, color=blush_color)
 
                 if makeup_options.get('eyeshadow', {}).get('enabled', False):
-                    left_eye_shadow_indices = [157,56,222,223,224,225,113,247,30,29,27,28]
+                    left_eye_shadow_indices = [157,56,222,223,224,225,113,247,160,159,158]
                     right_eye_shadow_indices = [384,286,258,442,443,444,445,342,388,387,386,385]
                     eyeshadow_color = makeup_options['eyeshadow'].get('color', (91, 123, 195))
                     processed_frame = self.apply_eyeshadow(processed_frame, left_eye_shadow_indices, right_eye_shadow_indices, color=eyeshadow_color)

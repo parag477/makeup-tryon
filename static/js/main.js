@@ -4,73 +4,117 @@ document.addEventListener('DOMContentLoaded', function() {
     const webcam = document.getElementById('webcam');
     const uploadedImage = document.getElementById('uploaded-image');
     const fileUpload = document.getElementById('file-upload');
-    const categoryButtons = document.querySelectorAll('.categories button');
     const colorButtons = document.querySelectorAll('.color-btn');
+    const makeupToggles = document.querySelectorAll('.switch input[type="checkbox"]');
+    const categoryButtons = document.querySelectorAll('.categories button');
     const tryOnButtons = document.querySelectorAll('.try-on-btn');
 
     let currentImage = null;
     let makeupOptions = {
-        lipstick_enabled: true,
-        lipstick_color: [0, 0, 255],
-        eyeliner_enabled: true,
-        eyeliner_color: [14, 14, 18],
-        eyeshadow_enabled: true,
-        eyeshadow_color: [91, 123, 195],
-        blush_enabled: true,
-        blush_color: [130, 119, 255]
+        lipstick: {
+            enabled: true,
+            color: [0, 0, 255]
+        },
+        eyeliner: {
+            enabled: true,
+            color: [14, 14, 18]
+        },
+        eyeshadow: {
+            enabled: true,
+            color: [91, 123, 195]
+        },
+        blush: {
+            enabled: true,
+            color: [130, 119, 255]
+        }
     };
 
-    // Webcam handling
     async function setupWebcam() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            webcam.srcObject = stream;
-            webcam.addEventListener('loadeddata', function() {
-                captureAndProcess();
+            // Check for secure context
+            if (!window.isSecureContext) {
+                throw new Error('Page must be served over HTTPS to access the camera');
+            }
+    
+            // Check for camera permissions
+            const permissions = await navigator.permissions.query({ name: 'camera' });
+            if (permissions.state === 'denied') {
+                throw new Error('Camera permission has been denied. Please reset permissions and reload the page.');
+            }
+    
+            // Request camera access with specific constraints
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    width: { ideal: 640 }, // Lower resolution for better performance
+                    height: { ideal: 480 },
+                    facingMode: 'user',
+                    frameRate: { ideal: 15 } // Lower frame rate for better performance
+                },
+                audio: false
             });
+    
+            // Set up video stream
+            webcam.srcObject = stream;
+            webcam.style.display = 'block';
+            uploadedImage.style.display = 'none';
+    
+            // Wait for video to be ready
+            await new Promise((resolve) => {
+                webcam.onloadedmetadata = () => {
+                    webcam.play();
+                    resolve();
+                };
+            });
+    
+            // Start processing
+            requestAnimationFrame(captureAndProcess);
+    
         } catch (err) {
-            console.error('Error accessing webcam:', err);
+            console.error('Webcam setup error:', err);
+            let errorMessage = 'Camera access error: ';
+            
+            if (!window.isSecureContext) {
+                errorMessage += 'Page must be accessed over HTTPS. ';
+            } else if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+                errorMessage += 'Camera permission denied. Please allow camera access in your browser settings. ';
+            } else if (err.name === 'NotFoundError') {
+                errorMessage += 'No camera found. Please connect a camera and reload the page. ';
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                errorMessage += 'Camera is in use by another application. Please close other apps using the camera. ';
+            } else {
+                errorMessage += err.message || 'Unknown error occurred. ';
+            }
+            
+            alert(errorMessage + 'Please check console for more details.');
         }
     }
 
-    // Capture and process frame
-    async function captureAndProcess() {
-        if (webcam.srcObject) {
-            const canvas = document.createElement('canvas');
-            canvas.width = webcam.videoWidth;
-            canvas.height = webcam.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(webcam, 0, 0);
-            
-            const imageData = canvas.toDataURL('image/jpeg');
-            currentImage = imageData;
-            
-            try {
-                const response = await fetch('/apply_makeup', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        image: imageData,
-                        ...makeupOptions
-                    })
-                });
-                
-                const data = await response.json();
-                if (data.success) {
-                    uploadedImage.src = data.processed_image;
-                    uploadedImage.style.display = 'block';
-                    webcam.style.display = 'none';
-                }
-            } catch (error) {
-                console.error('Error processing frame:', error);
-            }
-            
-            if (webcam.srcObject) {
-                requestAnimationFrame(captureAndProcess);
-            }
-        }
+    // Initialize the worker
+    const worker = new Worker('worker.js');
+
+    worker.onmessage = function(event) {
+        // Handle the processed image
+        const processedImage = event.data;
+        currentImage = processedImage;
+        applyMakeup();
+    };
+
+    function captureAndProcess() {
+        if (!webcam.srcObject) return;
+
+        // Create a canvas to capture the frame
+        const canvas = document.createElement('canvas');
+        canvas.width = webcam.videoWidth;
+        canvas.height = webcam.videoHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(webcam, 0, 0);
+
+        // Send the image data to the worker
+        const imageData = canvas.toDataURL('image/jpeg');
+        worker.postMessage(imageData);
+
+        // Use requestAnimationFrame for the next frame
+        requestAnimationFrame(captureAndProcess);
     }
 
     // File upload handling
@@ -83,26 +127,47 @@ document.addEventListener('DOMContentLoaded', function() {
                 uploadedImage.src = currentImage;
                 webcam.style.display = 'none';
                 uploadedImage.style.display = 'block';
-                
-                const formData = new FormData();
-                formData.append('file', file);
-                
-                try {
-                    const response = await fetch('/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    const data = await response.json();
-                    if (data.success) {
-                        uploadedImage.src = data.processed_image;
-                    }
-                } catch (error) {
-                    console.error('Error uploading file:', error);
-                }
+                await applyMakeup();
             }
             reader.readAsDataURL(file);
         }
+    });
+
+    // Toggle makeup types
+    makeupToggles.forEach(toggle => {
+        toggle.addEventListener('change', function() {
+            const type = this.getAttribute('data-type');
+            makeupOptions[type].enabled = this.checked;
+            if (currentImage) {
+                applyMakeup();
+            }
+        });
+    });
+
+    // Color selection
+    colorButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const type = this.getAttribute('data-type');
+            const rgbValues = JSON.parse(this.getAttribute('data-color'));
+            
+            // Remove selected class from other buttons of the same type
+            document.querySelectorAll(`.color-btn[data-type="${type}"].selected`).forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked button
+            this.classList.add('selected');
+            
+            // Convert RGB to BGR for backend (OpenCV uses BGR)
+            const bgrValues = [rgbValues[2], rgbValues[1], rgbValues[0]];
+            makeupOptions[type].color = bgrValues;
+            
+            console.log(`${type} color set to:`, bgrValues);  // Add logging for debugging
+            
+            if (currentImage) {
+                applyMakeup();
+            }
+        });
     });
 
     // Category selection
@@ -113,57 +178,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const category = this.getAttribute('data-category');
             
             // Reset all makeup options to false first
-            makeupOptions.lipstick_enabled = false;
-            makeupOptions.eyeliner_enabled = false;
-            makeupOptions.eyeshadow_enabled = false;
-            makeupOptions.blush_enabled = false;
+            makeupOptions.lipstick.enabled = false;
+            makeupOptions.eyeliner.enabled = false;
+            makeupOptions.eyeshadow.enabled = false;
+            makeupOptions.blush.enabled = false;
             
             // Enable specific makeup feature based on category
             if (category === 'all') {
-                makeupOptions.lipstick_enabled = true;
-                makeupOptions.eyeliner_enabled = true;
-                makeupOptions.eyeshadow_enabled = true;
-                makeupOptions.blush_enabled = true;
+                makeupOptions.lipstick.enabled = true;
+                makeupOptions.eyeliner.enabled = true;
+                makeupOptions.eyeshadow.enabled = true;
+                makeupOptions.blush.enabled = true;
             } else if (category === 'lipstick') {
-                makeupOptions.lipstick_enabled = true;
+                makeupOptions.lipstick.enabled = true;
             } else if (category === 'eyeliner') {
-                makeupOptions.eyeliner_enabled = true;
+                makeupOptions.eyeliner.enabled = true;
             } else if (category === 'eyeshadow') {
-                makeupOptions.eyeshadow_enabled = true;
+                makeupOptions.eyeshadow.enabled = true;
             } else if (category === 'blush') {
-                makeupOptions.blush_enabled = true;
-            }
-            
-            if (currentImage) {
-                applyMakeup();
-            }
-        });
-    });
-
-    // Color selection
-    colorButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            colorButtons.forEach(btn => btn.classList.remove('selected'));
-            this.classList.add('selected');
-            
-            const activeCategory = document.querySelector('.categories button.active').getAttribute('data-category');
-            const rgbValues = JSON.parse(this.getAttribute('data-color'));
-            
-            // Convert RGB to BGR (swap first and last values)
-            const bgrValues = [rgbValues[2], rgbValues[1], rgbValues[0]];
-            
-            // Update makeup options based on category
-            if (activeCategory === 'all' || activeCategory === 'lipstick') {
-                makeupOptions.lipstick_color = bgrValues;
-            }
-            if (activeCategory === 'all' || activeCategory === 'eyeliner') {
-                makeupOptions.eyeliner_color = bgrValues;
-            }
-            if (activeCategory === 'all' || activeCategory === 'eyeshadow') {
-                makeupOptions.eyeshadow_color = bgrValues;
-            }
-            if (activeCategory === 'all' || activeCategory === 'blush') {
-                makeupOptions.blush_color = bgrValues;
+                makeupOptions.blush.enabled = true;
             }
             
             if (currentImage) {
@@ -182,13 +215,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 body: JSON.stringify({
                     image: currentImage,
-                    ...makeupOptions
+                    lipstick_enabled: makeupOptions.lipstick.enabled,
+                    lipstick_color: makeupOptions.lipstick.color,
+                    eyeliner_enabled: makeupOptions.eyeliner.enabled,
+                    eyeliner_color: makeupOptions.eyeliner.color,
+                    eyeshadow_enabled: makeupOptions.eyeshadow.enabled,
+                    eyeshadow_color: makeupOptions.eyeshadow.color,
+                    blush_enabled: makeupOptions.blush.enabled,
+                    blush_color: makeupOptions.blush.color
                 })
             });
             
             const data = await response.json();
             if (data.success) {
                 uploadedImage.src = data.processed_image;
+                uploadedImage.style.display = 'block';
+                if (webcam.srcObject) {
+                    webcam.style.display = 'none';
+                }
+            } else {
+                console.error('Error applying makeup:', data.error);
             }
         } catch (error) {
             console.error('Error applying makeup:', error);
